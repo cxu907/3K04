@@ -1,11 +1,18 @@
-
 # Dashboard Module
+#
+# Hides how information is displayed. Uses other modules only through
+# their exported getters.
+#
+# Interface:
+#   showDashboard(adc_status) -> None (prints the current state of the system)
 
-from inventory import inventory, checkLowStock, pharmacist_notifications
-from health_manager import health, it_notifications
+from inventory import getAllStock
+from health_manager import getAllHealth
+from alarm_manager import getActiveAlarms, getMaintenanceNotes
+from adc_communication import getAllAdcStatus
 
 
-def showDashboard(adc_status):
+def showDashboard():
 
     print("\n===================================")
     print("  HOSPITAL ADC MONITORING SYSTEM")
@@ -14,35 +21,58 @@ def showDashboard(adc_status):
     print("\nADC STATUS")
     print("-----------------------------------")
 
-    for cabinet_id, status in adc_status.items():
+    for cabinet_id, status in getAllAdcStatus().items():
         print(f"{cabinet_id}: {status}")
+        if status == "Offline":
+            print("COMMUNICATION LOST - data may be out of date")
+
+    print("\nACTIVE ALARMS")
+    print("-----------------------------------")
+
+    alarms = getActiveAlarms()
+    adc_status = getAllAdcStatus()
+
+    if not alarms:
+        print("(none)")
+
+    for cabinet_id, reason in alarms:
+        print(f"{cabinet_id}: {reason}")
 
     print("\nMEDICATION INVENTORY")
     print("-----------------------------------")
 
-    for medication_key, quantity in inventory.items():
+    for item in getAllStock():
 
-        cabinet_id, medication = medication_key
+        print(f"\nCabinet: {item['cabinet']}")
+        print(f"Medication: {item['medication']}")
+        print(f"Quantity: {item['quantity']}")
 
-        print(f"\nCabinet: {cabinet_id}")
-        print(f"Medication: {medication}")
-        print(f"Quantity: {quantity}")
-
-        if checkLowStock(cabinet_id, medication):
+        if item["low"]:
             print("LOW STOCK ALERT!")
 
-        if pharmacist_notifications[medication_key] == True:
+        if item["pharmacist_notified"]:
             print("Pharmacist has been notified")
 
     print("\nHEALTH STATUS")
     print("-----------------------------------")
 
-    for cabinet_id, status in health.items():
+    for item in getAllHealth():
 
-        print(f"\nCabinet: {cabinet_id}")
-        print(f"Health: {status}")
+        print(f"\nCabinet: {item['cabinet']}")
+        print(f"Health: {item['state']}")
 
-        if it_notifications[cabinet_id] == True:
+        if item["it_notified"]:
             print("IT technician has been notified")
+
+    print("\nMAINTENANCE NOTES")
+    print("-----------------------------------")
+
+    notes = getMaintenanceNotes()
+
+    if not notes:
+        print("(none)")
+
+    for cabinet_id, description in notes:
+        print(f"{cabinet_id}: {description}")
 
     print("\n===================================")
